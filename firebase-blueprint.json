@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "Client": {
+      "title": "Client",
+      "description": "Dossier client SERVI-DOX avec prestations administratives et montants en DA",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64, "description": "Matricule client unique" },
+        "nom": { "type": "string", "maxLength": 100, "description": "Nom de famille" },
+        "prenom": { "type": "string", "maxLength": 100, "description": "Prénom" },
+        "dateInscription": { "type": "string", "maxLength": 20, "description": "Date d'inscription YYYY-MM-DD" },
+        "adresse": { "type": "string", "maxLength": 255, "description": "Adresse postale" },
+        "ville": { "type": "string", "maxLength": 100, "description": "Ville ou Wilaya" },
+        "codePostal": { "type": "string", "maxLength": 20, "description": "Code postal" },
+        "email": { "type": "string", "maxLength": 150, "description": "Email du client" },
+        "contact": { "type": "string", "maxLength": 50, "description": "Numéro de téléphone direct ou WhatsApp" },
+        "typeDossier": { "type": "string", "maxLength": 100, "description": "Type de prestation juridique ou administrative" },
+        "precisionAutre": { "type": "string", "maxLength": 255, "description": "Précisions complémentaires" },
+        "motifDossier": { "type": "string", "maxLength": 255, "description": "Motif du dossier" },
+        "statut": { "type": "string", "maxLength": 50, "description": "Statut du dossier (En cours, Validé, En attente, Clôturé)" },
+        "montantTotal": { "type": "number", "description": "Montant total facturé en Dinars Algériens (DA)" },
+        "montantEncaisse": { "type": "number", "description": "Montant encaissé en DA" },
+        "montantReste": { "type": "number", "description": "Solde restant dû en DA" },
+        "notes": { "type": "string", "maxLength": 1000, "description": "Remarques internes de gestion" },
+        "createdAt": { "type": "string", "maxLength": 50, "description": "Date de création ISO" },
+        "updatedAt": { "type": "string", "maxLength": 50, "description": "Date de dernière modification ISO" }
+      },
+      "required": ["id", "nom", "prenom", "contact", "typeDossier", "statut"]
+    },
+    "AutoEntrepreneurDossier": {
+      "title": "AutoEntrepreneurDossier",
+      "description": "Suivi des 6 étapes administratives et fiscales pour auto-entrepreneurs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64, "description": "ID unique du dossier AE" },
+        "clientId": { "type": "string", "maxLength": 64, "description": "Matricule client associé" },
+        "nom": { "type": "string", "maxLength": 100, "description": "Nom" },
+        "prenom": { "type": "string", "maxLength": 100, "description": "Prénom" },
+        "telephone": { "type": "string", "maxLength": 50, "description": "Téléphone de contact" },
+        "email": { "type": "string", "maxLength": 150, "description": "Adresse email" },
+        "wilaya": { "type": "string", "maxLength": 100, "description": "Wilaya de résidence" },
+        "commune": { "type": "string", "maxLength": 100, "description": "Commune" },
+        "activiteMetier": { "type": "string", "maxLength": 150, "description": "Activité ou profession exercée" },
+        "numeroANAE": { "type": "string", "maxLength": 64, "description": "Numéro d'immatriculation ANAE" },
+        "dateCreation": { "type": "string", "maxLength": 30, "description": "Date de prise en charge" },
+        "typeSuivi": { "type": "string", "maxLength": 50, "description": "Formule (bureau, hors_wilaya, prise_en_charge)" },
+        "etatInscription": { "type": "string", "maxLength": 50, "description": "Statut d'inscription ANAE" },
+        "etatCasnos": { "type": "string", "maxLength": 50, "description": "Statut d'affiliation et cotisation CASNOS" },
+        "etatImpot": { "type": "string", "maxLength": 50, "description": "Statut de déclaration d'impôts IFU" },
+        "etatCompteBancaire": { "type": "string", "maxLength": 50, "description": "Statut de domiciliation bancaire" },
+        "banqueChoisie": { "type": "string", "maxLength": 50, "description": "Banque commerciale sélectionnée" },
+        "ribBancaire": { "type": "string", "maxLength": 50, "description": "Numéro de compte RIB bancaire" },
+        "etatAutorisationGenerale": { "type": "string", "maxLength": 50, "description": "Statut de l'autorisation générale légalisée" },
+        "etatGriffe": { "type": "string", "maxLength": 50, "description": "Statut de fabrication de la griffe commerciale" },
+        "tarifServidoxDA": { "type": "number", "description": "Tarif de la prestation SERVI-DOX en DA" },
+        "montantEncaisseDA": { "type": "number", "description": "Montant encaissé en DA" },
+        "montantResteDA": { "type": "number", "description": "Reste à recouvrer en DA" },
+        "notes": { "type": "string", "maxLength": 1000, "description": "Notes de suivi" },
+        "updatedAt": { "type": "string", "maxLength": 50, "description": "Horodatage de mise à jour ISO" }
+      },
+      "required": ["id", "nom", "prenom", "telephone", "wilaya", "typeSuivi"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Collaborateur de l'équipe SERVI-DOX et registre de rémunération",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64, "description": "Matricule employé (ex: EMP-101)" },
+        "nom": { "type": "string", "maxLength": 100, "description": "Nom" },
+        "prenom": { "type": "string", "maxLength": 100, "description": "Prénom" },
+        "role": { "type": "string", "maxLength": 100, "description": "Intitulé du poste" },
+        "departement": { "type": "string", "maxLength": 100, "description": "Département assigné" },
+        "dateRecrutement": { "type": "string", "maxLength": 30, "description": "Date de recrutement" },
+        "joursTravail": { "type": "string", "maxLength": 100, "description": "Jours d'activité ouvrables" },
+        "heuresTravail": { "type": "string", "maxLength": 100, "description": "Plage horaire de travail" },
+        "typeContrat": { "type": "string", "maxLength": 50, "description": "Type de contrat (CDI, CDD, etc.)" },
+        "statut": { "type": "string", "maxLength": 50, "description": "Statut (Actif, En congé, etc.)" },
+        "email": { "type": "string", "maxLength": 150, "description": "Email professionnel" },
+        "contact": { "type": "string", "maxLength": 50, "description": "Contact téléphonique" },
+        "adresse": { "type": "string", "maxLength": 255, "description": "Adresse du salarié" },
+        "salaireMensuel": { "type": "number", "description": "Salaire mensuel de base en DA" },
+        "profilBio": { "type": "string", "maxLength": 1000, "description": "Présentation du profil" },
+        "createdAt": { "type": "string", "maxLength": 50, "description": "Date de création" },
+        "updatedAt": { "type": "string", "maxLength": 50, "description": "Date de mise à jour" }
+      },
+      "required": ["id", "nom", "prenom", "role", "departement", "salaireMensuel"]
+    },
+    "ClientActivityLog": {
+      "title": "ClientActivityLog",
+      "description": "Entrée du journal d'activité de gestion SERVI-DOX",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64, "description": "ID unique de l'action" },
+        "clientId": { "type": "string", "maxLength": 64, "description": "ID du dossier concerné" },
+        "clientName": { "type": "string", "maxLength": 150, "description": "Nom du client concerné" },
+        "action": { "type": "string", "maxLength": 50, "description": "Type d'action (creation, modification, etc.)" },
+        "details": { "type": "string", "maxLength": 500, "description": "Description détaillée de l'opération" },
+        "timestamp": { "type": "string", "maxLength": 50, "description": "Horodatage de l'action" },
+        "author": { "type": "string", "maxLength": 100, "description": "Auteur de l'action" }
+      },
+      "required": ["id", "clientId", "clientName", "action", "details", "timestamp", "author"]
+    },
+    "UserSession": {
+      "title": "UserSession",
+      "description": "Compte utilisateur et profil d'accès SERVI-DOX",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "UID utilisateur Firebase Auth" },
+        "name": { "type": "string", "maxLength": 100, "description": "Nom complet de l'utilisateur" },
+        "email": { "type": "string", "maxLength": 150, "description": "Email" },
+        "role": { "type": "string", "maxLength": 50, "description": "Rôle (Administrateur, Employé, etc.)" },
+        "jobTitle": { "type": "string", "maxLength": 100, "description": "Poste ou fonction" },
+        "accountStatus": { "type": "string", "maxLength": 30, "description": "Statut d'approbation (approved, pending, rejected)" },
+        "avatarInitials": { "type": "string", "maxLength": 10, "description": "Initiales avatar" },
+        "registeredAt": { "type": "string", "maxLength": 50, "description": "Date d'enregistrement" },
+        "phone": { "type": "string", "maxLength": 50, "description": "Numéro de téléphone" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Demande de rendez-vous client avec créneaux (Samedi-Jeudi 08:30-11:30 & 13:30-15:30) et motif",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64, "description": "Identifiant unique du rendez-vous" },
+        "nom": { "type": "string", "maxLength": 100, "description": "Nom du client" },
+        "prenom": { "type": "string", "maxLength": 100, "description": "Prénom du client" },
+        "telephone": { "type": "string", "maxLength": 50, "description": "Téléphone pour contact et WhatsApp" },
+        "email": { "type": "string", "maxLength": 150, "description": "Email pour notification et confirmation" },
+        "date": { "type": "string", "maxLength": 20, "description": "Date du rendez-vous YYYY-MM-DD" },
+        "heure": { "type": "string", "maxLength": 20, "description": "Heure du rendez-vous (08:30-11:30 ou 13:30-15:30)" },
+        "motif": { "type": "string", "maxLength": 150, "description": "Motif issu du menu latéral ou prestation" },
+        "remarque": { "type": "string", "maxLength": 1000, "description": "Précisions supplémentaires" },
+        "statut": { "type": "string", "maxLength": 50, "description": "Statut: en_attente, confirme, termine, annule" },
+        "notificationVue": { "type": "boolean", "description": "Indicateur de lecture de la notification" },
+        "createdAt": { "type": "string", "maxLength": 50, "description": "Date de demande ISO" },
+        "updatedAt": { "type": "string", "maxLength": 50, "description": "Date de mise à jour ISO" }
+      },
+      "required": ["id", "nom", "prenom", "telephone", "date", "heure", "motif", "statut"]
+    }
+  },
+  "firestore": {
+    "/clients/{clientId}": {
+      "schema": { "$ref": "#/entities/Client" },
+      "description": "Fiches clients et dossiers administratifs SERVI-DOX"
+    },
+    "/autoEntrepreneurs/{dossierId}": {
+      "schema": { "$ref": "#/entities/AutoEntrepreneurDossier" },
+      "description": "Suivi des dossiers auto-entrepreneurs"
+    },
+    "/employees/{employeeId}": {
+      "schema": { "$ref": "#/entities/Employee" },
+      "description": "Collaborateurs et registre de paie SERVI-DOX"
+    },
+    "/activityLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ClientActivityLog" },
+      "description": "Journal d'activité et traçabilité"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserSession" },
+      "description": "Profils des utilisateurs et autorisations d'accès"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/Appointment" },
+      "description": "Rendez-vous clients réservés depuis la page d'accueil ou de login"
+    }
+  }
+}

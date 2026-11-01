@@ -1,0 +1,8 @@
+{
+  "name": "ClientSphere CRM",
+  "description": "Application professionnelle de gestion des clients avec authentification, formulaire d'ajout complet, recherche multicritères et modification des données en temps réel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

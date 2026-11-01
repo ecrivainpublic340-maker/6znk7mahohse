@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. GLOBAL SAFETY NET (DEFAULT-DENY CATCH-ALL)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. HELPER FUNCTIONS
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation Client
+    function isValidClient(data) {
+      return data.id is string && data.id.size() <= 64 &&
+        data.nom is string && data.nom.size() <= 100 &&
+        data.prenom is string && data.prenom.size() <= 100 &&
+        data.contact is string && data.contact.size() <= 50 &&
+        data.typeDossier is string && data.typeDossier.size() <= 100 &&
+        data.statut is string && data.statut.size() <= 50;
+    }
+
+    // Validation Auto-Entrepreneur
+    function isValidAutoEntrepreneur(data) {
+      return data.id is string && data.id.size() <= 64 &&
+        data.nom is string && data.nom.size() <= 100 &&
+        data.prenom is string && data.prenom.size() <= 100 &&
+        data.telephone is string && data.telephone.size() <= 50 &&
+        data.wilaya is string && data.wilaya.size() <= 100 &&
+        data.typeSuivi is string && data.typeSuivi.size() <= 50;
+    }
+
+    // Validation Employé
+    function isValidEmployee(data) {
+      return data.id is string && data.id.size() <= 64 &&
+        data.nom is string && data.nom.size() <= 100 &&
+        data.prenom is string && data.prenom.size() <= 100 &&
+        data.role is string && data.role.size() <= 100 &&
+        data.departement is string && data.departement.size() <= 100 &&
+        data.salaireMensuel is number && data.salaireMensuel >= 0;
+    }
+
+    // Validation Log d'Activité
+    function isValidActivityLog(data) {
+      return data.id is string && data.id.size() <= 64 &&
+        data.clientId is string && data.clientId.size() <= 64 &&
+        data.clientName is string && data.clientName.size() <= 150 &&
+        data.action is string && data.action.size() <= 50 &&
+        data.details is string && data.details.size() <= 500 &&
+        data.author is string && data.author.size() <= 100;
+    }
+
+    // Validation Rendez-vous
+    function isValidAppointment(data) {
+      return data.id is string && data.id.size() <= 64 &&
+        data.nom is string && data.nom.size() <= 100 &&
+        data.prenom is string && data.prenom.size() <= 100 &&
+        data.telephone is string && data.telephone.size() <= 50 &&
+        data.date is string && data.date.size() <= 20 &&
+        data.heure is string && data.heure.size() <= 20 &&
+        data.motif is string && data.motif.size() <= 150 &&
+        data.statut is string && data.statut.size() <= 50;
+    }
+
+    // 3. COLLECTION RULES
+
+    // Ping / Test de connexion pour initialisation SDK
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+
+    // Clients & Dossiers SERVI-DOX (Synchronisation universelle cloud multi-ordinateurs)
+    match /clients/{clientId} {
+      allow read: if true;
+      allow create: if isValidId(clientId) && isValidClient(request.resource.data);
+      allow update: if isValidId(clientId) && isValidClient(request.resource.data);
+      allow delete: if isValidId(clientId);
+    }
+
+    // Dossiers Auto-Entrepreneurs
+    match /autoEntrepreneurs/{dossierId} {
+      allow read: if true;
+      allow create: if isValidId(dossierId) && isValidAutoEntrepreneur(request.resource.data);
+      allow update: if isValidId(dossierId) && isValidAutoEntrepreneur(request.resource.data);
+      allow delete: if isValidId(dossierId);
+    }
+
+    // Employés et Paie
+    match /employees/{employeeId} {
+      allow read: if true;
+      allow create, update: if isValidId(employeeId) && isValidEmployee(request.resource.data);
+      allow delete: if isValidId(employeeId);
+    }
+
+    // Journal d'Activité (Audit Trail immuable)
+    match /activityLogs/{logId} {
+      allow read: if true;
+      allow create: if isValidId(logId) && isValidActivityLog(request.resource.data);
+      allow update: if false; // Les logs d'audit sont immuables
+      allow delete: if isValidId(logId);
+    }
+
+    // Profils Utilisateurs & Sessions
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(userId);
+    }
+
+    // Demandes de Rendez-vous (Réservation publique par le client, gestion par l'équipe)
+    match /appointments/{appointmentId} {
+      allow read: if true;
+      allow create: if isValidId(appointmentId) && isValidAppointment(request.resource.data);
+      allow update: if isValidId(appointmentId) && isValidAppointment(request.resource.data);
+      allow delete: if isValidId(appointmentId);
+    }
+  }
+}
