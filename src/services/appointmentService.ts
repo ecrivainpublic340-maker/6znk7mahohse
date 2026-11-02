@@ -4,6 +4,56 @@ import { MASTER_ADMIN_EMAIL } from '../context/AuthContext';
 
 export const APPOINTMENTS_STORAGE_KEY = 'servidox_appointments_v1';
 export const APPOINTMENT_OUTBOX_KEY = 'servidox_appointment_emails_outbox_v1';
+export const DELETED_APPOINTMENTS_KEY = 'servidox_deleted_appointments_v1';
+
+/**
+ * Récupère l'ensemble des identifiants de rendez-vous supprimés par l'utilisateur
+ */
+export function getDeletedAppointmentIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_APPOINTMENTS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr);
+      }
+    }
+  } catch (e) {
+    console.error('Erreur lecture rendez-vous supprimés:', e);
+  }
+  return new Set();
+}
+
+/**
+ * Enregistre un identifiant de rendez-vous comme définitivement supprimé (Tombstone)
+ */
+export function markAppointmentAsDeleted(id: string): void {
+  if (!id) return;
+  try {
+    const ids = getDeletedAppointmentIds();
+    ids.add(id);
+    localStorage.setItem(DELETED_APPOINTMENTS_KEY, JSON.stringify(Array.from(ids)));
+  } catch (e) {
+    console.error('Erreur enregistrement suppression RDV:', e);
+  }
+}
+
+/**
+ * Retire un identifiant de la liste des supprimés (ex: lors de la création d'un nouveau RDV)
+ */
+export function unmarkAppointmentAsDeleted(id: string): void {
+  if (!id) return;
+  try {
+    const ids = getDeletedAppointmentIds();
+    if (ids.has(id)) {
+      ids.delete(id);
+      localStorage.setItem(DELETED_APPOINTMENTS_KEY, JSON.stringify(Array.from(ids)));
+    }
+  } catch (e) {
+    console.error('Erreur retrait tombstone RDV:', e);
+  }
+}
+
 
 /**
  * Valide une date et une heure de rendez-vous :

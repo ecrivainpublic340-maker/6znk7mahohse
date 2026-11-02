@@ -104,12 +104,11 @@ const SAMPLE_EMPLOYEES: Employee[] = [
 ];
 
 const ROLE_SUGGESTIONS = [
-  'Gestionnaire Dossiers RC & Entreprise',
-  'Conseiller Auto-entrepreneur',
-  'Responsable Administratif',
-  'Comptable & Facturation',
-  'Chargé(e) Accueil & Relation Client',
-  ' Juriste / Consultant Formalités',
+  'Gérant',
+  'PDG',
+  'Secrétaire',
+  'Assistante Administrative',
+  'Responsable de Dossier',
 ];
 
 const JOURS_SUGGESTIONS = [
@@ -136,13 +135,13 @@ interface TeamPageProps {
 export const TeamPage: React.FC<TeamPageProps> = ({ onSendEmployeeGmail, onNavigatePayroll }) => {
   const { showToast } = useClients();
   const { user, registeredUsers, approveUserAccount, rejectUserAccount, isMasterAdmin } = useAuth();
-  const canModifyEmployees = isMasterAdmin;
+  const canModifyEmployees = isMasterAdmin || user?.role === 'Administrateur';
   const pendingAccounts = useMemo(
     () =>
-      isMasterAdmin
+      (isMasterAdmin || user?.role === 'Administrateur')
         ? registeredUsers.filter((u) => u.accountStatus === 'pending')
         : [],
-    [registeredUsers, isMasterAdmin]
+    [registeredUsers, isMasterAdmin, user?.role]
   );
 
   const [employees, setEmployees] = useState<Employee[]>(() => {
@@ -368,14 +367,12 @@ export const TeamPage: React.FC<TeamPageProps> = ({ onSendEmployeeGmail, onNavig
   };
 
   const handleDeleteEmployee = (emp: Employee) => {
-    if (confirm(`Confirmez-vous la suppression de la fiche employé de "${emp.prenom} ${emp.nom}" ?`)) {
-      setEmployees((prev) => prev.filter((item) => item.id !== emp.id));
-      deleteEmployeeFromFirestore(emp.id);
-      if (viewingEmployee?.id === emp.id) {
-        setViewingEmployee(null);
-      }
-      showToast('Employé supprimé', `La fiche de ${emp.prenom} ${emp.nom} a été retirée.`, 'warning');
+    setEmployees((prev) => prev.filter((item) => item.id !== emp.id));
+    deleteEmployeeFromFirestore(emp.id);
+    if (viewingEmployee?.id === emp.id) {
+      setViewingEmployee(null);
     }
+    showToast('Employé supprimé', `La fiche de ${emp.prenom} ${emp.nom} a été retirée.`, 'warning');
   };
 
   const handleExportTeamCSV = () => {
@@ -1210,7 +1207,7 @@ export const TeamPage: React.FC<TeamPageProps> = ({ onSendEmployeeGmail, onNavig
                     required
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    placeholder="Ex: Gestionnaire Dossiers RC & Entreprise"
+                    placeholder="Ex: Gérant, PDG, Responsable de Dossier..."
                     className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-700"
                   />
                   <div className="flex flex-wrap gap-1.5 mt-1.5">

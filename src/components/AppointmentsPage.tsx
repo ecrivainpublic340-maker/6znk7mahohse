@@ -27,6 +27,8 @@ import { Appointment, StatutRendezVous, MOTIFS_RENDEZ_VOUS } from '../types/appo
 import {
   APPOINTMENTS_STORAGE_KEY,
   sendAppointmentNotificationEmail,
+  getDeletedAppointmentIds,
+  markAppointmentAsDeleted,
 } from '../services/appointmentService';
 import {
   subscribeToAppointments,
@@ -47,8 +49,14 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
   // Appointments State
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     try {
+      const deletedIds = getDeletedAppointmentIds();
       const saved = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((a: Appointment) => a && a.id && !deletedIds.has(a.id));
+        }
+      }
     } catch {
       // Fallback
     }
@@ -58,7 +66,9 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
   // Local storage synchronization
   useEffect(() => {
     try {
-      localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
+      const deletedIds = getDeletedAppointmentIds();
+      const cleanList = appointments.filter((a) => a && a.id && !deletedIds.has(a.id));
+      localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(cleanList));
     } catch (e) {
       console.error(e);
     }
@@ -66,28 +76,16 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
 
   // Firestore real-time listener (multi-ordinateurs)
   useEffect(() => {
-    let hasReconciled = false;
     const unsubscribe = subscribeToAppointments((remoteAppointments) => {
-      if (!hasReconciled) {
-        hasReconciled = true;
-        if (remoteAppointments && remoteAppointments.length > 0) {
-          setAppointments(remoteAppointments);
-        } else {
-          try {
-            const saved = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
-            if (saved) {
-              const parsed: Appointment[] = JSON.parse(saved);
-              if (parsed && parsed.length > 0) {
-                console.info(`Synchronisation de ${parsed.length} RDV vers Cloud Firestore...`);
-                parsed.forEach((a) => persistAppointmentToFirestore(a));
-              }
-            }
-          } catch (e) {
-            console.error('Erreur téléversement initial RDV:', e);
-          }
-        }
-      } else {
-        setAppointments(remoteAppointments || []);
+      const deletedIds = getDeletedAppointmentIds();
+      const cleanList = (remoteAppointments || []).filter(
+        (a) => a && a.id && !deletedIds.has(a.id)
+      );
+      setAppointments(cleanList);
+      try {
+        localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(cleanList));
+      } catch (e) {
+        console.error(e);
       }
     });
     return () => unsubscribe();
@@ -184,14 +182,25 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
     const apt = appointments.find((a) => a.id === id);
     if (!apt) return;
 
-    if (confirm(`Confirmez-vous la suppression du rendez-vous ${apt.id} de ${apt.prenom} ${apt.nom} ?`)) {
-      setAppointments((prev) => prev.filter((a) => a.id !== id));
-      await deleteAppointmentFromFirestore(id);
-      if (selectedAppointment?.id === id) {
-        setSelectedAppointment(null);
-      }
-      showToast('Rendez-vous supprimé', 'Le rendez-vous a été retiré du système.', 'warning');
+    // 1. Enregistrer dans la liste de suppression permanente (empêche toute réapparition)
+    markAppointmentAsDeleted(id);
+
+    // 2. Mettre à jour l'état local et le localStorage immédiatement
+    const updatedList = appointments.filter((a) => a.id !== id);
+    setAppointments(updatedList);
+    try {
+      localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (e) {
+      console.error(e);
     }
+
+    // 3. Purger de Cloud Firestore
+    await deleteAppointmentFromFirestore(id);
+
+    if (selectedAppointment?.id === id) {
+      setSelectedAppointment(null);
+    }
+    showToast('Rendez-vous supprimé', 'Le rendez-vous a été retiré définitivement du système.', 'warning');
   };
 
   const handleResendEmail = async (apt: Appointment) => {

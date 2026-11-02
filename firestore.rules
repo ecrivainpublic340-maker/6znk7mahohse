@@ -10,7 +10,7 @@ service cloud.firestore {
 
     // 2. HELPER FUNCTIONS
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     // Validation Client
@@ -112,8 +112,7 @@ service cloud.firestore {
     // Demandes de Rendez-vous (Réservation publique par le client, gestion par l'équipe)
     match /appointments/{appointmentId} {
       allow read: if true;
-      allow create: if isValidId(appointmentId) && isValidAppointment(request.resource.data);
-      allow update: if isValidId(appointmentId) && isValidAppointment(request.resource.data);
+      allow create, update: if isValidId(appointmentId) && isValidAppointment(request.resource.data);
       allow delete: if isValidId(appointmentId);
     }
   }

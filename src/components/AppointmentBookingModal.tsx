@@ -26,6 +26,7 @@ import {
   validateAppointmentDateTime,
   sendAppointmentNotificationEmail,
   APPOINTMENTS_STORAGE_KEY,
+  unmarkAppointmentAsDeleted,
 } from '../services/appointmentService';
 import { persistAppointmentToFirestore } from '../services/firestoreSync';
 
@@ -35,6 +36,24 @@ interface AppointmentBookingModalProps {
   defaultMotif?: string;
 }
 
+const COUNTRY_DIAL_CODES = [
+  { code: '+213', flag: '🇩🇿', country: 'Algérie', placeholder: '550 12 34 56' },
+  { code: '+33', flag: '🇫🇷', country: 'France', placeholder: '6 12 34 56 78' },
+  { code: '+32', flag: '🇧🇪', country: 'Belgique', placeholder: '470 12 34 56' },
+  { code: '+1', flag: '🇨🇦', country: 'Canada / USA', placeholder: '514 123 4567' },
+  { code: '+34', flag: '🇪🇸', country: 'Espagne', placeholder: '612 34 56 78' },
+  { code: '+39', flag: '🇮🇹', country: 'Italie', placeholder: '312 345 6789' },
+  { code: '+49', flag: '🇩🇪', country: 'Allemagne', placeholder: '151 23456789' },
+  { code: '+44', flag: '🇬🇧', country: 'Royaume-Uni', placeholder: '7700 900077' },
+  { code: '+41', flag: '🇨🇭', country: 'Suisse', placeholder: '78 123 45 67' },
+  { code: '+216', flag: '🇹🇳', country: 'Tunisie', placeholder: '20 123 456' },
+  { code: '+212', flag: '🇲🇦', country: 'Maroc', placeholder: '612 345678' },
+  { code: '+971', flag: '🇦🇪', country: 'Émirats Arabes Unis', placeholder: '50 123 4567' },
+  { code: '+966', flag: '🇸🇦', country: 'Arabie Saoudite', placeholder: '50 123 4567' },
+  { code: '+974', flag: '🇶🇦', country: 'Qatar', placeholder: '3312 3456' },
+  { code: '+90', flag: '🇹🇷', country: 'Turquie', placeholder: '501 234 56 78' },
+];
+
 export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = ({
   isOpen,
   onClose,
@@ -43,6 +62,7 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
   // Form state
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
+  const [countryCode, setCountryCode] = useState('+213');
   const [telephone, setTelephone] = useState('');
   const [email, setEmail] = useState('');
   const [motif, setMotif] = useState(defaultMotif || MOTIFS_RENDEZ_VOUS[0].title);
@@ -112,11 +132,16 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
       const uniqueNum = Math.floor(100 + Math.random() * 900);
       const appointmentId = `RDV-${new Date().getFullYear()}-${uniqueNum}`;
 
+      const rawPhone = telephone.trim();
+      const formattedPhone = rawPhone.startsWith('+')
+        ? rawPhone
+        : `${countryCode} ${rawPhone.replace(/^0+/, '')}`;
+
       const newAppointment: Appointment = {
         id: appointmentId,
         nom: nom.trim(),
         prenom: prenom.trim(),
-        telephone: telephone.trim(),
+        telephone: formattedPhone,
         email: email.trim(),
         date,
         heure,
@@ -129,6 +154,7 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
       };
 
       // 1. Sauvegarder dans le cache local
+      unmarkAppointmentAsDeleted(newAppointment.id);
       try {
         const raw = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
         const list = raw ? JSON.parse(raw) : [];
@@ -172,7 +198,7 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-10 my-8">
+      <div className="relative w-full max-w-2xl bg-white text-slate-900 rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-10 my-8">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 text-white p-6 sm:p-8">
           <button
@@ -296,8 +322,8 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
                     required
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
-                    placeholder="ex: BENALI"
-                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
+                    placeholder="Nom de famille"
+                    className="w-full px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 font-medium bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
                   />
                 </div>
                 <div>
@@ -309,8 +335,8 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
                     required
                     value={prenom}
                     onChange={(e) => setPrenom(e.target.value)}
-                    placeholder="ex: Karim"
-                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
+                    placeholder="Prénom"
+                    className="w-full px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 font-medium bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
                   />
                 </div>
               </div>
@@ -320,16 +346,33 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Téléphone (WhatsApp) <span className="text-rose-500">*</span>
                   </label>
-                  <div className="relative">
-                    <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                    <input
-                      type="tel"
-                      required
-                      value={telephone}
-                      onChange={(e) => setTelephone(e.target.value)}
-                      placeholder="0550 12 34 56"
-                      className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
-                    />
+                  <div className="flex items-stretch rounded-xl border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-blue-600 focus-within:bg-white transition overflow-hidden">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      aria-label="Indicatif pays"
+                      className="pl-2.5 pr-1.5 py-2.5 text-xs font-semibold text-slate-900 bg-slate-100/80 border-r border-slate-200 focus:outline-none cursor-pointer shrink-0"
+                    >
+                      {COUNTRY_DIAL_CODES.map((item) => (
+                        <option key={item.code} value={item.code} className="text-slate-900 bg-white">
+                          {item.flag} {item.code} ({item.country})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="relative flex-1">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3 pointer-events-none" />
+                      <input
+                        type="tel"
+                        required
+                        value={telephone}
+                        onChange={(e) => setTelephone(e.target.value)}
+                        placeholder={
+                          COUNTRY_DIAL_CODES.find((c) => c.code === countryCode)?.placeholder ||
+                          '550 12 34 56'
+                        }
+                        className="w-full pl-8 pr-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 font-medium bg-transparent focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -343,7 +386,7 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="client@gmail.com"
-                      className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
+                      className="w-full pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 font-medium bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
                     />
                   </div>
                 </div>
@@ -468,7 +511,7 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
                 value={remarque}
                 onChange={(e) => setRemarque(e.target.value)}
                 placeholder="ex: Je souhaite créer une SARL dans l'import-export et domicilier mon siège social."
-                className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition resize-none"
+                className="w-full px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 font-medium bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition resize-none"
               />
             </div>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Client, StatutDossier } from '../types/client';
 import { useClients } from '../context/ClientContext';
 import { formatDA, getWhatsAppUrl } from '../utils/format';
@@ -18,6 +18,11 @@ export const ClientDetailsDrawer: React.FC<ClientDetailsDrawerProps> = ({
   onEdit,
 }) => {
   const { updateClientStatut, deleteClient } = useClients();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    setConfirmDelete(false);
+  }, [client, isOpen]);
 
   if (!isOpen || !client) return null;
 
@@ -26,10 +31,13 @@ export const ClientDetailsDrawer: React.FC<ClientDetailsDrawerProps> = ({
   };
 
   const handleDelete = () => {
-    if (confirm(`Confirmez-vous la suppression du dossier de "${client.nom} ${client.prenom}" ?`)) {
-      deleteClient(client.id);
-      onClose();
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
     }
+    deleteClient(client.id);
+    setConfirmDelete(false);
+    onClose();
   };
 
   const reste = client.montantReste !== undefined ? client.montantReste : Math.max(0, (client.montantTotal || 0) - (client.montantEncaisse || 0));
@@ -222,10 +230,14 @@ export const ClientDetailsDrawer: React.FC<ClientDetailsDrawerProps> = ({
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
           <button
             onClick={handleDelete}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-rose-700 hover:bg-rose-100 rounded-lg transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              confirmDelete
+                ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-xs'
+                : 'text-rose-700 hover:bg-rose-100'
+            }`}
           >
             <Trash2 className="w-4 h-4" />
-            <span>Supprimer</span>
+            <span>{confirmDelete ? 'Confirmer ?' : 'Supprimer'}</span>
           </button>
 
           <button

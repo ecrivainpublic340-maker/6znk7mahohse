@@ -170,7 +170,7 @@ export const ClientListPage: React.FC<ClientListPageProps> = ({ onNavigateAdd, o
   // Save inline edit in real-time
   const handleSaveInlineEdit = (id: string) => {
     if (!inlineFormData.nom?.trim() || !inlineFormData.prenom?.trim()) {
-      alert('Le nom et le prénom sont obligatoires.');
+      showToast('Champs obligatoires', 'Le nom et le prénom sont obligatoires.', 'error');
       return;
     }
 
@@ -197,10 +197,8 @@ export const ClientListPage: React.FC<ClientListPageProps> = ({ onNavigateAdd, o
     updateClientStatut(id, newStatut);
   };
 
-  const handleDeleteWithPrompt = (id: string, nom: string, prenom: string) => {
-    if (confirm(`Confirmez-vous la suppression du dossier de "${nom} ${prenom}" ?`)) {
-      deleteClient(id);
-    }
+  const handleDeleteWithPrompt = (id: string) => {
+    deleteClient(id);
   };
 
   const getTypeBadge = (type: TypeDossier) => {
@@ -302,20 +300,6 @@ export const ClientListPage: React.FC<ClientListPageProps> = ({ onNavigateAdd, o
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {clients.length > 0 && (
-              <button
-                onClick={() => {
-                  if (confirm('Êtes-vous certain de vouloir vider complètement la liste des clients pour la rendre vierge ?')) {
-                    clearAllClients();
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors"
-                title="Vider la liste des clients"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span>Vider la liste</span>
-              </button>
-            )}
 
             <button
               onClick={() => exportClientsListPDF(filteredClients)}
@@ -502,12 +486,6 @@ export const ClientListPage: React.FC<ClientListPageProps> = ({ onNavigateAdd, o
                   >
                     <Plus className="w-4 h-4" />
                     <span>Ajouter un premier client</span>
-                  </button>
-                  <button
-                    onClick={loadSampleClients}
-                    className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                  >
-                    Charger des exemples de test en DA (facultatif)
                   </button>
                 </div>
               </>
@@ -905,8 +883,8 @@ export const ClientListPage: React.FC<ClientListPageProps> = ({ onNavigateAdd, o
 
                           {/* Delete */}
                           <button
-                            onClick={() => handleDeleteWithPrompt(client.id, client.nom, client.prenom)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            onClick={() => handleDeleteWithPrompt(client.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                             title="Supprimer ce dossier"
                             aria-label="Supprimer"
                           >

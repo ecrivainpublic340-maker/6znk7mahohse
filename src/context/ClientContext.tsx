@@ -9,7 +9,11 @@ import {
   deleteClientFromFirestore,
   subscribeToActivityLogs,
   persistActivityLogInFirestore,
+  clearActivityLogsFromFirestore,
+  persistAutoEntrepreneurToFirestore,
+  deleteAutoEntrepreneurFromFirestore,
 } from '../services/firestoreSync';
+import { AutoEntrepreneurDossier } from '../types/autoEntrepreneur';
 
 interface ToastInfo {
   id: string;
@@ -51,6 +55,7 @@ interface ClientContextType {
   loadSampleClients: () => void;
   getClientById: (id: string) => Client | undefined;
   resetToDemoData: () => void;
+  clearLogs: () => void;
   exportCSV: () => void;
   lastUpdatedClientId: string | null;
   // Draft management for unadded client information
@@ -247,6 +252,46 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     persistClientToFirestore(newClient);
     persistActivityLogInFirestore(newLog);
 
+    // Classification automatique : si le client est de type 'Auto-entrepreneur',
+    // on crée et synchronise immédiatement son dossier dans la page Auto-Entrepreneur
+    if (newClient.typeDossier === 'Auto-entrepreneur') {
+      const aeId = `AE-${newId.replace('cli-', '')}`;
+      const aeDossier: AutoEntrepreneurDossier = {
+        id: aeId,
+        clientId: newId,
+        nom: newClient.nom,
+        prenom: newClient.prenom,
+        telephone: newClient.contact,
+        email: newClient.email,
+        wilaya: newClient.ville || '16 - Alger',
+        activiteMetier: newClient.motifDossier || 'Auto-entrepreneur',
+        dateCreation: newClient.dateInscription || now.split('T')[0],
+        typeSuivi: 'prise_en_charge',
+        etatInscription: newClient.statut === 'Validé' ? 'inscrit' : 'en_cours',
+        etatCasnos: 'non_inscrit',
+        etatImpot: 'non_depose',
+        etatCompteBancaire: 'non_pret',
+        etatAutorisationGenerale: 'non_prete',
+        etatGriffe: 'non_prete',
+        tarifServidoxDA: newClient.montantTotal || 40000,
+        montantEncaisseDA: newClient.montantEncaisse || 0,
+        montantResteDA: newClient.montantReste || 0,
+        notes: newClient.notes || '',
+        updatedAt: now,
+      };
+      persistAutoEntrepreneurToFirestore(aeDossier);
+      try {
+        const raw = localStorage.getItem('servidox_autoentrepreneur_dossiers_v2');
+        const list = raw ? JSON.parse(raw) : [];
+        if (!list.some((d: any) => d.id === aeId || d.clientId === newId)) {
+          list.unshift(aeDossier);
+          localStorage.setItem('servidox_autoentrepreneur_dossiers_v2', JSON.stringify(list));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     setLastUpdatedClientId(newId);
     showToast('Client enregistré', `Le dossier de ${newClient.nom} ${newClient.prenom} (${newClient.typeDossier}) a été créé.`);
 
@@ -355,9 +400,25 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deleteClientFromFirestore(id);
     persistActivityLogInFirestore(newLog);
 
+    if (client.typeDossier === 'Auto-entrepreneur') {
+      const aeId = `AE-${id.replace('cli-', '')}`;
+      deleteAutoEntrepreneurFromFirestore(aeId);
+      try {
+        const raw = localStorage.getItem('servidox_autoentrepreneur_dossiers_v2');
+        if (raw) {
+          const list = JSON.parse(raw);
+          const filtered = list.filter((d: any) => d.id !== aeId && d.clientId !== id);
+          localStorage.setItem('servidox_autoentrepreneur_dossiers_v2', JSON.stringify(filtered));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     showToast('Client supprimé', `Le dossier de ${client.nom} ${client.prenom} a été supprimé.`, 'warning');
     return true;
   };
+
 
   const clearAllClients = () => {
     const clientsToDelete = [...clients];
@@ -386,8 +447,21 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const getClientById = (id: string) => clients.find((c) => c.id === id);
 
+  const clearLogs = () => {
+    const idsToClear = logs.map((l) => l.id);
+    setLogs([]);
+    try {
+      localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify([]));
+    } catch (e) {
+      console.error(e);
+    }
+    clearActivityLogsFromFirestore(idsToClear);
+    showToast('Historique effacé', 'Le journal d\'activité a été effacé avec succès. Tous vos clients et calculs restent intacts.', 'info');
+  };
+
   const resetToDemoData = () => {
-    clearAllClients();
+    // Sécurité stricte : n'efface QUE le journal des notifications, JAMAIS les clients ni leurs calculs
+    clearLogs();
   };
 
   const exportCSV = () => {
@@ -467,6 +541,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         loadSampleClients,
         getClientById,
         resetToDemoData,
+        clearLogs,
         exportCSV,
         lastUpdatedClientId,
         clientDraft,

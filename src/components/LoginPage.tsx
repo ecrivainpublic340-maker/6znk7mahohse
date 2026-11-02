@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { LanguageSwitcherButton } from '../context/LanguageContext';
 import {
   Lock,
   Mail,
@@ -31,6 +32,8 @@ import {
   Sparkles,
   Check,
   Calendar,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { InteractiveCloudBackground } from './InteractiveCloudBackground';
 import { AppointmentBookingModal } from './AppointmentBookingModal';
@@ -47,6 +50,7 @@ export const LoginPage: React.FC = () => {
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Register form state
   const [regAccountType, setRegAccountType] = useState<'employe' | 'admin'>('employe');
@@ -56,6 +60,7 @@ export const LoginPage: React.FC = () => {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -117,26 +122,50 @@ export const LoginPage: React.FC = () => {
     setError(null);
     setPendingNotice(null);
     setIsLoading(true);
-    const res = await loginWithGoogle();
-    if (!res.success) {
-      setError(res.error || 'Erreur lors de la connexion Google.');
+    try {
+      const res = await loginWithGoogle();
+      if (!res.success) {
+        if (res.isPending) {
+          setPendingNotice({
+            name: 'Utilisateur Google',
+            email: 'Compte Google',
+            jobTitle: 'Collaborateur SERVI-DOX',
+          });
+        } else {
+          setError(res.error || 'Erreur lors de la connexion Google.');
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de la connexion Google.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setPendingNotice(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      const res = login(loginEmail, loginPassword, true);
+    try {
+      const res = await login(loginEmail, loginPassword, true);
       if (!res.success) {
-        setError(res.error || 'Identifiants invalides');
+        if (res.isPending) {
+          setPendingNotice({
+            name: loginEmail,
+            email: loginEmail,
+            jobTitle: 'Collaborateur SERVI-DOX',
+          });
+        } else {
+          setError(res.error || 'Identifiants invalides');
+        }
       }
+    } catch (err: any) {
+      setError(err?.message || 'Erreur de connexion inattendue.');
+    } finally {
       setIsLoading(false);
-    }, 200);
+    }
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -308,6 +337,9 @@ export const LoginPage: React.FC = () => {
 
         {/* Action Buttons for Lateral Menu */}
         <div className="flex items-center gap-2">
+          {/* Bouton Changement de Langue (Français <-> Arabe) */}
+          <LanguageSwitcherButton variant="dark" />
+
           {/* Bouton Prise de Rendez-vous Client */}
           <button
             type="button"
@@ -662,32 +694,59 @@ export const LoginPage: React.FC = () => {
                         required
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="zinemoh106@gmail.com"
+                        placeholder="Votre adresse email"
                         className="block w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-slate-700 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="login-password"
-                      className="block text-xs font-semibold text-slate-300"
-                    >
-                      Mot de passe
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="login-password"
+                        className="block text-xs font-semibold text-slate-300"
+                      >
+                        Mot de passe
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        {showLoginPassword ? (
+                          <>
+                            <EyeOff className="w-3 h-3" />
+                            <span>Masquer</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3 h-3" />
+                            <span>Afficher</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <div className="mt-1 relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                         <Lock className="w-4 h-4" />
                       </div>
                       <input
                         id="login-password"
-                        type="password"
+                        type={showLoginPassword ? 'text' : 'password'}
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="block w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-slate-700 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full pl-9 pr-10 py-2 text-xs sm:text-sm border border-slate-700 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                        title={showLoginPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                      >
+                        {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
 
@@ -754,7 +813,7 @@ export const LoginPage: React.FC = () => {
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="exemple@gmail.com"
+                    placeholder="Votre adresse email"
                     className="mt-1 block w-full px-3 py-1.5 text-xs sm:text-sm border border-slate-700 rounded-xl bg-slate-900/90 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -772,9 +831,18 @@ export const LoginPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300">Mot de passe</label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-300">Mot de passe</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPassword(!showRegPassword)}
+                        className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer"
+                      >
+                        {showRegPassword ? 'Masquer' : 'Afficher'}
+                      </button>
+                    </div>
                     <input
-                      type="password"
+                      type={showRegPassword ? 'text' : 'password'}
                       required
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
@@ -785,7 +853,7 @@ export const LoginPage: React.FC = () => {
                   <div>
                     <label className="block text-xs font-semibold text-slate-300">Confirmer</label>
                     <input
-                      type="password"
+                      type={showRegPassword ? 'text' : 'password'}
                       required
                       value={regConfirmPassword}
                       onChange={(e) => setRegConfirmPassword(e.target.value)}

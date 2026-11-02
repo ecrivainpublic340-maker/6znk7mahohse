@@ -24,10 +24,7 @@ import {
   Calendar,
   LogOut,
   FolderKanban,
-  Globe,
-  Copy,
   Check,
-  ExternalLink,
   Clock,
   XCircle,
   MessageCircle,
@@ -71,13 +68,6 @@ export const AdminProfilePage: React.FC<AdminProfilePageProps> = ({ onNavigate }
 
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [copiedValue, setCopiedValue] = useState<string | null>(null);
-
-  const handleCopy = (val: string) => {
-    navigator.clipboard.writeText(val);
-    setCopiedValue(val);
-    setTimeout(() => setCopiedValue(null), 2000);
-  };
 
   useEffect(() => {
     if (user) {
@@ -434,13 +424,7 @@ export const AdminProfilePage: React.FC<AdminProfilePageProps> = ({ onNavigate }
                       <button
                         type="button"
                         onClick={() => {
-                          if (
-                            confirm(
-                              `Supprimer définitivement le compte utilisateur de "${empUser.name}" ?`
-                            )
-                          ) {
-                            deleteUserAccount(empUser.id);
-                          }
+                          deleteUserAccount(empUser.id);
                         }}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Supprimer ce compte"
@@ -859,24 +843,6 @@ export const AdminProfilePage: React.FC<AdminProfilePageProps> = ({ onNavigate }
                 <span>Exporter les clients (CSV)</span>
               </button>
 
-              {clients.length > 0 && (
-                <button
-                  onClick={() => {
-                    if (
-                      confirm(
-                        'Confirmez-vous la remise à zéro vierge de toute la liste des clients ?'
-                      )
-                    ) {
-                      clearAllClients();
-                    }
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Rendre la liste vierge</span>
-                </button>
-              )}
-
               <button
                 onClick={logout}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors ml-auto"
@@ -886,100 +852,6 @@ export const AdminProfilePage: React.FC<AdminProfilePageProps> = ({ onNavigate }
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Hostinger Domain Assistant Card: servidox.pro */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200">
-              <Globe className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">
-                  Assistant de Liaison Domaine Hostinger : <span className="font-mono text-blue-700">servidox.pro</span>
-                </h3>
-                <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
-                  Prêt dans le code
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Valeurs DNS prêtes à copier-coller dans votre espace <strong>Hostinger (hPanel &rarr; Domaines &rarr; servidox.pro &rarr; DNS)</strong>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="https://console.cloud.google.com/run/domains?project=gen-lang-client-0873942829"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              <span>1. Activer servidox.pro sur Cloud Run</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-            <a
-              href="https://console.firebase.google.com/project/gen-lang-client-0873942829/authentication/settings"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-            >
-              <span>2. Autoriser servidox.pro dans Firebase Auth</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px]">
-                <th className="py-2.5 px-3">Type</th>
-                <th className="py-2.5 px-3">Nom (Host)</th>
-                <th className="py-2.5 px-3">Valeur (Pointe vers / Cible)</th>
-                <th className="py-2.5 px-3">TTL</th>
-                <th className="py-2.5 px-3 text-right">Action rapide</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-mono">
-              {[
-                { type: 'A', host: '@', value: '216.239.32.21', ttl: '3600' },
-                { type: 'A', host: '@', value: '216.239.34.21', ttl: '3600' },
-                { type: 'A', host: '@', value: '216.239.36.21', ttl: '3600' },
-                { type: 'A', host: '@', value: '216.239.38.21', ttl: '3600' },
-                { type: 'CNAME', host: 'www', value: 'ghs.googlehosted.com', ttl: '3600' },
-              ].map((record, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="py-2 px-3 font-bold text-blue-700">{record.type}</td>
-                  <td className="py-2 px-3 text-slate-800">{record.host}</td>
-                  <td className="py-2 px-3 text-slate-900 font-semibold">{record.value}</td>
-                  <td className="py-2 px-3 text-slate-500">{record.ttl}</td>
-                  <td className="py-2 px-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(record.value)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-sans font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-md transition-colors"
-                    >
-                      {copiedValue === record.value ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          <span className="text-emerald-700">Copié !</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3 text-slate-500" />
-                          <span>Copier la valeur</span>
-                        </>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

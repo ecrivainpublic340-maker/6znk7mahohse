@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useClients } from '../context/ClientContext';
+import { LanguageSwitcherButton } from '../context/LanguageContext';
 import {
   LogOut,
   Users,
   UserPlus,
-  History,
-  TrendingUp,
-  Mail,
   UserCheck,
   ShieldCheck,
   Menu,
   X,
   ChevronRight,
+  BadgeCheck,
+  Calendar,
+  Building2,
+  Landmark,
+  Globe2,
+  Building,
   Briefcase,
   FileText,
-  BadgeCheck,
+  TrendingUp,
+  Mail,
   FileSpreadsheet,
-  Calendar,
-  Bell,
-  Download,
+  History,
 } from 'lucide-react';
 import { subscribeToAppointments } from '../services/firestoreSync';
 
@@ -28,6 +31,11 @@ export type ActiveTab =
   | 'clients'
   | 'add'
   | 'autoentrepreneur'
+  | 'sarl_eurl'
+  | 'registre_rc'
+  | 'hors_wilaya'
+  | 'suivi_bureau'
+  | 'tarifs_dossiers'
   | 'team'
   | 'paie'
   | 'revenues'
@@ -69,7 +77,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
   const rawNavItems: Array<{
     id: ActiveTab;
     label: string;
-    subtitle: string;
+    subtitle?: string;
     icon: React.ReactNode;
     badge?: number | string;
     badgeAlert?: boolean;
@@ -78,10 +86,6 @@ export const Sidebar: React.FC<NavigationProps> = ({
     {
       id: 'profile',
       label: isMasterAdmin ? 'Profil Administrateur' : 'Mon Profil Employé',
-      subtitle:
-        isMasterAdmin && pendingEmployeesCount > 0
-          ? `${pendingEmployeesCount} compte(s) à valider !`
-          : 'Mon compte & tableau de bord',
       icon: <UserCheck className="w-4 h-4" />,
       badge: isMasterAdmin && pendingEmployeesCount > 0 ? `${pendingEmployeesCount} att.` : undefined,
       badgeAlert: isMasterAdmin && pendingEmployeesCount > 0,
@@ -89,7 +93,6 @@ export const Sidebar: React.FC<NavigationProps> = ({
     {
       id: 'appointments',
       label: 'Rendez-vous Clients',
-      subtitle: unreadAppointmentsCount > 0 ? `${unreadAppointmentsCount} nouvelle(s) demande(s) !` : 'Créneaux & planning en direct',
       icon: <Calendar className="w-4 h-4" />,
       badge: unreadAppointmentsCount > 0 ? `${unreadAppointmentsCount} nouv.` : appointmentsCount > 0 ? appointmentsCount : undefined,
       badgeAlert: unreadAppointmentsCount > 0,
@@ -97,26 +100,52 @@ export const Sidebar: React.FC<NavigationProps> = ({
     {
       id: 'clients',
       label: 'Liste des Clients',
-      subtitle: 'Recherche & contrôle en direct',
       icon: <Users className="w-4 h-4" />,
       badge: clients.length,
     },
     {
       id: 'add',
       label: 'Ajouter un Client',
-      subtitle: 'Nouveau dossier en DA',
       icon: <UserPlus className="w-4 h-4" />,
     },
     {
       id: 'autoentrepreneur',
       label: 'Auto-Entrepreneur',
-      subtitle: 'Suivi, CASNOS, Impôts & Banques',
       icon: <BadgeCheck className="w-4 h-4" />,
+      badge: clients.filter((c) => c.typeDossier === 'Auto-entrepreneur').length || undefined,
+    },
+    {
+      id: 'sarl_eurl',
+      label: 'SARL / EURL',
+      icon: <Building2 className="w-4 h-4" />,
+      badge: clients.filter((c) => c.typeDossier === 'Entreprise').length || undefined,
+    },
+    {
+      id: 'registre_rc',
+      label: 'Registre RC',
+      icon: <Landmark className="w-4 h-4" />,
+      badge: clients.filter((c) => c.typeDossier === 'RC').length || undefined,
+    },
+    {
+      id: 'hors_wilaya',
+      label: 'Hors Wilaya',
+      icon: <Globe2 className="w-4 h-4" />,
+      badge: clients.filter((c) => c.typeDossier === 'Inscription & Suivi (Hors Wilaya)').length || undefined,
+    },
+    {
+      id: 'suivi_bureau',
+      label: 'Suivi Bureau',
+      icon: <Building className="w-4 h-4" />,
+      badge: clients.filter((c) => c.typeDossier === 'Inscription & Suivi (Bureau)').length || undefined,
+    },
+    {
+      id: 'tarifs_dossiers',
+      label: 'Tarifs & Papiers (PDF)',
+      icon: <FileText className="w-4 h-4 text-amber-400" />,
     },
     {
       id: 'team',
       label: 'Notre Équipe',
-      subtitle: 'Employés, rôles & horaires',
       icon: <Briefcase className="w-4 h-4" />,
       badge: isMasterAdmin && pendingEmployeesCount > 0 ? pendingEmployeesCount : undefined,
       badgeAlert: isMasterAdmin && pendingEmployeesCount > 0,
@@ -125,32 +154,27 @@ export const Sidebar: React.FC<NavigationProps> = ({
     {
       id: 'paie',
       label: 'Fiches de Paie',
-      subtitle: 'Bulletins mensuels & annuels A4',
       icon: <FileText className="w-4 h-4" />,
     },
     {
       id: 'revenues',
       label: 'Tableau des Revenus',
-      subtitle: 'Semaine, Mois & Annuel (DA)',
       icon: <TrendingUp className="w-4 h-4" />,
       masterOnly: true, // STRICTLY RESTRICTED TO zinemoh106@gmail.com
     },
     {
       id: 'gmail',
       label: 'Messagerie Gmail',
-      subtitle: 'E-mails & relances clients',
       icon: <Mail className="w-4 h-4" />,
     },
     {
       id: 'sheets',
       label: 'Google Sheets',
-      subtitle: 'Tableurs Drive & Synchronisation',
       icon: <FileSpreadsheet className="w-4 h-4 text-emerald-400" />,
     },
     {
       id: 'logs',
       label: "Journal d'Activité",
-      subtitle: 'Historique en temps réel',
       icon: <History className="w-4 h-4" />,
       badge: activityLogs.length > 0 ? activityLogs.length : undefined,
     },
@@ -255,13 +279,15 @@ export const Sidebar: React.FC<NavigationProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-semibold truncate leading-tight">{item.label}</div>
-                  <div
-                    className={`text-[10px] truncate mt-0.5 ${
-                      isActive ? 'text-blue-100' : 'text-slate-400'
-                    }`}
-                  >
-                    {item.subtitle}
-                  </div>
+                  {item.subtitle && (
+                    <div
+                      className={`text-[10px] truncate mt-0.5 ${
+                        isActive ? 'text-blue-100' : 'text-slate-400'
+                      }`}
+                    >
+                      {item.subtitle}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -289,18 +315,8 @@ export const Sidebar: React.FC<NavigationProps> = ({
         })}
       </div>
 
-      {/* Bottom Download & Logout Action */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/40 space-y-2">
-        <a
-          href="/servidox-projet-complet.zip"
-          download="servidox-projet-complet.zip"
-          className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-blue-300 hover:text-white hover:bg-blue-600/30 border border-blue-500/30 transition-all flex items-center justify-center gap-2"
-          title="Télécharger l'archive complète de tout le code source (.ZIP)"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>Télécharger le site (.ZIP)</span>
-        </a>
-
+      {/* Bottom Logout Action */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/40">
         <button
           onClick={logout}
           className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-white hover:bg-rose-600/80 border border-rose-500/20 hover:border-rose-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -315,7 +331,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
   return (
     <>
       {/* Desktop Static Lateral Menu */}
-      <aside className="hidden lg:block h-screen sticky top-0 shrink-0">{sidebarContent}</aside>
+      <aside className="hidden lg:block h-screen sticky top-0 shrink-0 print:hidden">{sidebarContent}</aside>
 
       {/* Mobile Drawer Overlay */}
       {mobileOpen && (
@@ -341,9 +357,14 @@ export const Navbar: React.FC<NavigationProps> = ({
 
   const tabTitles: Record<ActiveTab, string> = {
     profile: isMasterAdmin ? 'Profil Administrateur Principal' : 'Mon Profil Employé',
-    clients: 'Liste & Contrôle des Clients',
-    add: 'Ajouter un Nouveau Client',
-    autoentrepreneur: 'Offre Auto-Entrepreneur — Suivi Administratif & Fiscal',
+    clients: 'Liste & Contrôle des Clients (Tous les dossiers)',
+    add: 'Ajouter un Nouveau Dossier Client',
+    autoentrepreneur: 'Dossiers Auto-Entrepreneurs — Suivi & CASNOS',
+    sarl_eurl: 'Dossiers SARL & EURL — Création d’Entreprise (100 000 DA)',
+    registre_rc: 'Dossiers Registre du Commerce RC (50 000 DA)',
+    hors_wilaya: 'Dossiers Clients Hors Wilaya — Suivi 58 Wilayas (15 000 DA)',
+    suivi_bureau: 'Dossiers Inscription & Suivi au Bureau (12 000 DA)',
+    tarifs_dossiers: 'Guide des Tarifs & Papiers Nécessaires (PDF)',
     team: 'Notre Équipe — Gestion des Employés',
     paie: 'Fiches de Paie — Bulletins Mensuels & Bilans Annuels',
     revenues: 'Tableau des Revenus (DA)',
@@ -354,7 +375,7 @@ export const Navbar: React.FC<NavigationProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 h-15 px-4 sm:px-6 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 h-15 px-4 sm:px-6 flex items-center justify-between gap-4 print:hidden">
       <div className="flex items-center gap-3">
         {setMobileOpen && (
           <button
@@ -373,6 +394,8 @@ export const Navbar: React.FC<NavigationProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
+        <LanguageSwitcherButton variant="light" />
+
         {isMasterAdmin && pendingEmployeesCount > 0 && (
           <button
             onClick={() => setActiveTab('profile')}

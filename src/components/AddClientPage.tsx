@@ -20,8 +20,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { ActiveTab } from './Navbar';
+
 interface AddClientPageProps {
-  onSuccessNavigate: () => void;
+  onSuccessNavigate: (targetTab?: ActiveTab) => void;
 }
 
 const DOSSIER_TYPES: TypeDossier[] = [
@@ -132,14 +134,10 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
     if (!nom.trim()) errs.nom = 'Le nom est requis.';
     if (!prenom.trim()) errs.prenom = 'Le prénom est requis.';
     if (!dateInscription) errs.dateInscription = 'La date d\'inscription est requise.';
-    if (!adresse.trim()) errs.adresse = 'L\'adresse est requise.';
-    if (!email.trim()) {
-      errs.email = "L'email est requis.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errs.email = "Format d'adresse email invalide.";
     }
     if (!contact.trim()) errs.contact = 'Le contact téléphonique est requis.';
-    if (!motifDossier.trim()) errs.motifDossier = 'Le motif du dossier est requis.';
     if (typeDossier === 'Autre dossier' && !precisionAutre.trim()) {
       errs.precisionAutre = 'Veuillez préciser le type de dossier.';
     }
@@ -151,18 +149,22 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
   const handleSubmit = (andAddAnother: boolean = false) => {
     if (!validate()) return;
 
+    const defaultMotif = DOSSIER_TARIF_LABELS[typeDossier]?.label || `Dossier ${typeDossier}`;
+
     addClient({
       nom: nom.trim(),
       prenom: prenom.trim(),
       dateInscription,
-      adresse: adresse.trim(),
+      adresse: adresse.trim() || ville.trim() || 'Alger',
       ville: ville.trim() || 'Alger',
       codePostal: codePostal.trim() || '16000',
       email: email.trim(),
       contact: contact.trim(),
       typeDossier,
-      precisionAutre: typeDossier === 'Autre dossier' ? precisionAutre.trim() : undefined,
-      motifDossier: motifDossier.trim(),
+      ...(typeDossier === 'Autre dossier' && precisionAutre.trim()
+        ? { precisionAutre: precisionAutre.trim() }
+        : {}),
+      motifDossier: motifDossier.trim() || defaultMotif,
       statut,
       montantTotal: Number(montantTotal) || 0,
       montantEncaisse: Number(montantEncaisse) || 0,
@@ -170,96 +172,20 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
       notes: notes.trim(),
     });
 
+    const targetMap: Record<TypeDossier, ActiveTab> = {
+      'Auto-entrepreneur': 'autoentrepreneur',
+      'Entreprise': 'sarl_eurl',
+      'RC': 'registre_rc',
+      'Inscription & Suivi (Hors Wilaya)': 'hors_wilaya',
+      'Inscription & Suivi (Bureau)': 'suivi_bureau',
+      'Autre dossier': 'clients',
+    };
+
     if (andAddAnother) {
       handleWipeUnaddedFields();
     } else {
-      onSuccessNavigate();
+      onSuccessNavigate(targetMap[typeDossier] || 'clients');
     }
-  };
-
-  const handleFillReadyExample = (type: TypeDossier) => {
-    if (type === 'Auto-entrepreneur') {
-      setNom('Benali');
-      setPrenom('Karim');
-      setDateInscription(TODAY_DATE);
-      setAdresse('14 Rue Didouche Mourad');
-      setVille('Alger');
-      setCodePostal('16000');
-      setEmail('k.benali@gmail.com');
-      setContact('0550 12 34 56');
-      setTypeDossier('Auto-entrepreneur');
-      setMotifDossier('Création dossier Auto-entrepreneur (Frais SERVI-DOX hors frais de dossier)');
-      setStatut('En cours');
-      setMontantTotal(40000);
-      setMontantEncaisse(40000);
-      setMontantReste(0);
-      setNotes('Frais SERVI-DOX 40 000 DA réglés.');
-    } else if (type === 'RC') {
-      setNom('Haddad');
-      setPrenom('Samir');
-      setDateInscription(TODAY_DATE);
-      setAdresse('28 Boulevard Front de Mer');
-      setVille('Oran');
-      setCodePostal('31000');
-      setEmail('samir.haddad@yahoo.fr');
-      setContact('0661 78 90 12');
-      setTypeDossier('RC');
-      setMotifDossier('Immatriculation Registre du Commerce RC (Frais SERVI-DOX hors frais de dossier)');
-      setStatut('En cours');
-      setMontantTotal(50000);
-      setMontantEncaisse(30000);
-      setMontantReste(20000);
-      setNotes('Acompte de 30 000 DA reçu sur les 50 000 DA de Frais SERVI-DOX.');
-    } else if (type === 'Inscription & Suivi (Bureau)') {
-      setNom('Mansouri');
-      setPrenom('Yacine');
-      setDateInscription(TODAY_DATE);
-      setAdresse('Bureau SERVI-DOX');
-      setVille('Alger');
-      setCodePostal('16000');
-      setEmail('yacine.mansouri@gmail.com');
-      setContact('0552 88 99 00');
-      setTypeDossier('Inscription & Suivi (Bureau)');
-      setMotifDossier('Inscription et suivi administratif au niveau du bureau SERVI-DOX');
-      setStatut('Validé');
-      setMontantTotal(12000);
-      setMontantEncaisse(12000);
-      setMontantReste(0);
-      setNotes('Forfait bureau 12 000 DA réglé.');
-    } else if (type === 'Inscription & Suivi (Hors Wilaya)') {
-      setNom('Meziane');
-      setPrenom('Sofiane');
-      setDateInscription(TODAY_DATE);
-      setAdresse('Centre Ville');
-      setVille('Sétif');
-      setCodePostal('19000');
-      setEmail('sofiane.meziane@gmail.com');
-      setContact('0662 33 44 55');
-      setTypeDossier('Inscription & Suivi (Hors Wilaya)');
-      setMotifDossier('Inscription et suivi à distance — Client Hors Wilaya');
-      setStatut('En cours');
-      setMontantTotal(15000);
-      setMontantEncaisse(15000);
-      setMontantReste(0);
-      setNotes('Forfait Hors Wilaya 15 000 DA réglé.');
-    } else {
-      setNom('Brahimi');
-      setPrenom('Amira');
-      setDateInscription(TODAY_DATE);
-      setAdresse('12 Rue Larbi Ben M\'hidi');
-      setVille('Constantine');
-      setCodePostal('25000');
-      setEmail('amira.brahimi@conseil-dz.com');
-      setContact('0770 44 22 11');
-      setTypeDossier('Entreprise');
-      setMotifDossier('Création d\'entreprise SARL / EURL (Frais SERVI-DOX hors frais de dossier)');
-      setStatut('En cours');
-      setMontantTotal(100000);
-      setMontantEncaisse(60000);
-      setMontantReste(40000);
-      setNotes('Frais SERVI-DOX : 100 000 DA hors frais de dossier. Acompte 60 000 DA reçu.');
-    }
-    setErrors({});
   };
 
   const isFormDirty = Boolean(nom || prenom || adresse || email || contact || motifDossier);
@@ -271,7 +197,7 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <button
-            onClick={onSuccessNavigate}
+            onClick={() => onSuccessNavigate()}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors mb-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -317,51 +243,6 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
         </div>
       </div>
 
-      {/* Quick 1-click Preset Fillers (Barème officiel Frais SERVI-DOX hors frais de dossier) */}
-      <div className="mt-4 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 text-blue-950 font-bold">
-          <Sparkles className="w-4 h-4 text-blue-700 shrink-0" />
-          <span>Barème Officiel Frais SERVI-DOX (Hors frais de dossier) :</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => handleFillReadyExample('Entreprise')}
-            className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-900 rounded-md border border-blue-200 font-semibold transition-colors"
-          >
-            SARL / EURL (100 000 DA)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFillReadyExample('RC')}
-            className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-900 rounded-md border border-blue-200 font-semibold transition-colors"
-          >
-            Registre RC (50 000 DA)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFillReadyExample('Auto-entrepreneur')}
-            className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-900 rounded-md border border-blue-200 font-semibold transition-colors"
-          >
-            Auto-entrepreneur (40 000 DA)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFillReadyExample('Inscription & Suivi (Bureau)')}
-            className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded-md border border-emerald-200 font-semibold transition-colors"
-          >
-            Suivi Bureau (12 000 DA)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFillReadyExample('Inscription & Suivi (Hors Wilaya)')}
-            className="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-900 rounded-md border border-indigo-200 font-semibold transition-colors"
-          >
-            Hors Wilaya (15 000 DA)
-          </button>
-        </div>
-      </div>
-
       {/* Main Grid: Form (2 cols) and Live Preview (1 col) */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Form Container */}
@@ -384,7 +265,7 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
                   type="text"
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
-                  placeholder="Ex : Benali"
+                  placeholder="Nom de famille"
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 bg-white text-slate-900 ${
                     errors.nom
                       ? 'border-rose-400 focus:ring-rose-200'
@@ -402,7 +283,7 @@ export const AddClientPage: React.FC<AddClientPageProps> = ({ onSuccessNavigate 
                   type="text"
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
-                  placeholder="Ex : Karim"
+                  placeholder="Prénom"
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 bg-white text-slate-900 ${
                     errors.prenom
                       ? 'border-rose-400 focus:ring-rose-200'

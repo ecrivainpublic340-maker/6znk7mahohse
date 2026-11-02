@@ -23,14 +23,20 @@ export const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets.readonly',
 ];
 
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: 'select_account' });
-// Add standard email and profile scopes first to prevent heavy scope popup rejections
-provider.addScope('email');
-provider.addScope('profile');
+// Provider pour l'authentification standard (Connexion rapide, sans avertissements de permissions sensibles)
+const basicLoginProvider = new GoogleAuthProvider();
+basicLoginProvider.setCustomParameters({ prompt: 'select_account' });
+basicLoginProvider.addScope('email');
+basicLoginProvider.addScope('profile');
+
+// Provider étendu avec autorisations Google Workspace (Gmail, Sheets, Drive) pour les fonctionnalités avancées
+const workspaceProvider = new GoogleAuthProvider();
+workspaceProvider.setCustomParameters({ prompt: 'consent' });
+workspaceProvider.addScope('email');
+workspaceProvider.addScope('profile');
 SCOPES.forEach((scope) => {
   try {
-    provider.addScope(scope);
+    workspaceProvider.addScope(scope);
   } catch {
     // Ignore scope duplication
   }
@@ -60,10 +66,13 @@ export const initAuth = (
   });
 };
 
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+export const googleSignIn = async (
+  requestWorkspaceScopes: boolean = false
+): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
+    const targetProvider = requestWorkspaceScopes ? workspaceProvider : basicLoginProvider;
+    const result = await signInWithPopup(auth, targetProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     cachedAccessToken = credential?.accessToken || null;
     return { user: result.user, accessToken: cachedAccessToken || '' };
@@ -74,11 +83,13 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     if (error?.code === 'auth/network-request-failed') {
       friendlyMessage = 'Erreur réseau Firebase (connexion instable ou service indisponible). Veuillez réessayer ou vous connecter avec votre identifiant et mot de passe.';
     } else if (error?.code === 'auth/popup-blocked') {
-      friendlyMessage = 'La fenêtre de connexion Google a été bloquée par votre navigateur. Veuillez autoriser les popups pour ce site.';
+      friendlyMessage = 'La fenêtre de connexion Google a été bloquée par votre navigateur. Veuillez autoriser les fenêtres pop-up pour ce site.';
     } else if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
       friendlyMessage = 'Connexion Google annulée par l\'utilisateur.';
     } else if (error?.code === 'auth/unauthorized-domain') {
-      friendlyMessage = 'Ce domaine n\'est pas encore autorisé dans la console Firebase Authentication.';
+      friendlyMessage = 'Ce domaine n\'est pas encore autorisé dans Firebase Authentication. Veuillez utiliser vos identifiants email/mot de passe pour vous connecter directement.';
+    } else if (error?.message) {
+      friendlyMessage = `Erreur de connexion : ${error.message}`;
     }
 
     const err = new Error(friendlyMessage);

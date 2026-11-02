@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ClientProvider } from './context/ClientContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { Navbar, Sidebar, ActiveTab } from './components/Navbar';
 import { LoginPage } from './components/LoginPage';
 import { AdminProfilePage } from './components/AdminProfilePage';
@@ -19,6 +20,8 @@ import { AppointmentsPage } from './components/AppointmentsPage';
 import { GmailPage } from './components/GmailPage';
 import { GoogleSheetsPage } from './components/GoogleSheetsPage';
 import { ActivityLogView } from './components/ActivityLogModal';
+import { CategoryClientsPage } from './components/CategoryClientsPage';
+import { TarifsDossiersPage } from './components/TarifsDossiersPage';
 import { ToastContainer } from './components/Toast';
 import { Client } from './types/client';
 
@@ -85,7 +88,7 @@ const MainApp: React.FC = () => {
           )}
 
           {activeTab === 'add' && (
-            <AddClientPage onSuccessNavigate={() => setActiveTab('clients')} />
+            <AddClientPage onSuccessNavigate={(targetTab) => setActiveTab(targetTab || 'clients')} />
           )}
 
           {activeTab === 'autoentrepreneur' && (
@@ -114,6 +117,52 @@ const MainApp: React.FC = () => {
               }}
             />
           )}
+
+          {activeTab === 'sarl_eurl' && (
+            <CategoryClientsPage
+              category="sarl_eurl"
+              onSendGmail={(client) => {
+                setGmailTargetClient(client);
+                setActiveTab('gmail');
+              }}
+              onNavigateAdd={() => setActiveTab('add')}
+            />
+          )}
+
+          {activeTab === 'registre_rc' && (
+            <CategoryClientsPage
+              category="registre_rc"
+              onSendGmail={(client) => {
+                setGmailTargetClient(client);
+                setActiveTab('gmail');
+              }}
+              onNavigateAdd={() => setActiveTab('add')}
+            />
+          )}
+
+          {activeTab === 'hors_wilaya' && (
+            <CategoryClientsPage
+              category="hors_wilaya"
+              onSendGmail={(client) => {
+                setGmailTargetClient(client);
+                setActiveTab('gmail');
+              }}
+              onNavigateAdd={() => setActiveTab('add')}
+            />
+          )}
+
+          {activeTab === 'suivi_bureau' && (
+            <CategoryClientsPage
+              category="suivi_bureau"
+              onSendGmail={(client) => {
+                setGmailTargetClient(client);
+                setActiveTab('gmail');
+              }}
+              onNavigateAdd={() => setActiveTab('add')}
+            />
+          )}
+
+          {activeTab === 'tarifs_dossiers' && <TarifsDossiersPage />}
 
           {activeTab === 'team' &&
             (isMasterAdmin ? (
@@ -236,10 +285,12 @@ const MainApp: React.FC = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ClientProvider>
-        <MainApp />
-      </ClientProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <ClientProvider>
+          <MainApp />
+        </ClientProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

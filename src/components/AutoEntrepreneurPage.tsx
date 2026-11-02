@@ -126,7 +126,7 @@ interface AutoEntrepreneurPageProps {
 }
 
 export const AutoEntrepreneurPage: React.FC<AutoEntrepreneurPageProps> = ({ onSendGmail }) => {
-  const { clients, showToast } = useClients();
+  const { clients, deleteClient, showToast } = useClients();
 
   // Load dossiers from localStorage or initialize with mock data
   const [dossiers, setDossiers] = useState<AutoEntrepreneurDossier[]>(() => {
@@ -178,6 +178,53 @@ export const AutoEntrepreneurPage: React.FC<AutoEntrepreneurPageProps> = ({ onSe
     });
     return () => unsubscribe();
   }, []);
+
+  // Synchronisation automatique : intégrer immédiatement tout client enregistré comme 'Auto-entrepreneur'
+  useEffect(() => {
+    const aeClients = clients.filter((c) => c.typeDossier === 'Auto-entrepreneur');
+    if (aeClients.length === 0) return;
+
+    setDossiers((prevDossiers) => {
+      const existingKeys = new Set(prevDossiers.map((d) => d.clientId || d.id));
+      const missing: AutoEntrepreneurDossier[] = [];
+
+      aeClients.forEach((c) => {
+        const generatedId = `AE-${c.id.replace('cli-', '')}`;
+        if (!existingKeys.has(c.id) && !existingKeys.has(generatedId)) {
+          const newDossier: AutoEntrepreneurDossier = {
+            id: generatedId,
+            clientId: c.id,
+            nom: c.nom,
+            prenom: c.prenom,
+            telephone: c.contact,
+            email: c.email,
+            wilaya: c.ville || '16 - Alger',
+            activiteMetier: c.motifDossier || 'Auto-entrepreneur',
+            dateCreation: c.dateInscription || new Date().toISOString().split('T')[0],
+            typeSuivi: 'prise_en_charge',
+            etatInscription: c.statut === 'Validé' ? 'inscrit' : 'en_cours',
+            etatCasnos: 'non_inscrit',
+            etatImpot: 'non_depose',
+            etatCompteBancaire: 'non_pret',
+            etatAutorisationGenerale: 'non_prete',
+            etatGriffe: 'non_prete',
+            tarifServidoxDA: c.montantTotal || 40000,
+            montantEncaisseDA: c.montantEncaisse || 0,
+            montantResteDA: c.montantReste || 0,
+            notes: c.notes || '',
+            updatedAt: new Date().toISOString(),
+          };
+          missing.push(newDossier);
+          persistAutoEntrepreneurToFirestore(newDossier);
+        }
+      });
+
+      if (missing.length > 0) {
+        return [...missing, ...prevDossiers];
+      }
+      return prevDossiers;
+    });
+  }, [clients]);
 
   // View state & search/filters
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -341,11 +388,11 @@ export const AutoEntrepreneurPage: React.FC<AutoEntrepreneurPageProps> = ({ onSe
         nom: formNom.trim(),
         prenom: formPrenom.trim(),
         telephone: formTelephone.trim(),
-        email: formEmail.trim() || `${formPrenom.toLowerCase().replace(/\s+/g, '')}.${formNom.toLowerCase().replace(/\s+/g, '')}@autoentrepreneur.dz`,
+        email: formEmail.trim(),
         wilaya: formWilaya,
         commune: formCommune.trim(),
         activiteMetier: formActiviteMetier.trim() || 'Activité de services indépendante',
-        numeroANAE: formNumeroANAE.trim() || `ANAE-${formWilaya.split(' ')[0]}-${String(Math.floor(Math.random() * 90000) + 10000)}`,
+        numeroANAE: formNumeroANAE.trim(),
         dateCreation: new Date().toISOString().split('T')[0],
         typeSuivi: formTypeSuivi,
         etatInscription: formEtatInscription,
@@ -372,8 +419,12 @@ export const AutoEntrepreneurPage: React.FC<AutoEntrepreneurPageProps> = ({ onSe
 
   // Delete
   const handleDeleteDossier = (id: string) => {
+    const target = dossiers.find((d) => d.id === id);
     setDossiers(dossiers.filter((d) => d.id !== id));
     deleteAutoEntrepreneurFromFirestore(id);
+    if (target?.clientId) {
+      deleteClient(target.clientId);
+    }
     setDeleteConfirmId(null);
     if (viewingDossier?.id === id) {
       setViewingDossier(null);

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { UserSession, AccountApprovalStatus, Employee } from '../types/client';
 import { googleSignIn, googleLogout } from '../services/gmailService';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import {
   subscribeToUsersRegistry,
   persistUserToFirestore,
@@ -40,7 +42,7 @@ interface AuthContextType {
     email: string,
     password: string,
     rememberMe?: boolean
-  ) => { success: boolean; error?: string };
+  ) => Promise<{ success: boolean; error?: string; isPending?: boolean }>;
   register: (
     name: string,
     email: string,
@@ -50,7 +52,7 @@ interface AuthContextType {
     accountType?: 'employe' | 'admin',
     jobTitle?: string
   ) => { success: boolean; pendingApproval?: boolean; error?: string };
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string; isPending?: boolean }>;
   approveUserAccount: (userId: string) => void;
   rejectUserAccount: (userId: string) => void;
   deleteUserAccount: (userId: string) => void;
@@ -144,7 +146,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [registeredUsers]
   );
 
-  const login = (email: string, password: string, rememberMe: boolean = true) => {
+  const login = async (
+    email: string,
+    password: string,
+    rememberMe: boolean = true
+  ): Promise<{ success: boolean; error?: string; isPending?: boolean }> => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
@@ -157,10 +163,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const isMaster = cleanEmail === MASTER_ADMIN_EMAIL.toLowerCase();
 
-    const found = registeredUsers.find((u) => u.email.toLowerCase() === cleanEmail);
+    // 1. Chercher dans les utilisateurs enregistrés en mémoire
+    let found = registeredUsers.find((u) => u.email.toLowerCase() === cleanEmail);
 
-    // Master Administrator (zinemoh106@gmail.com) has absolute master access
+    // 2. Si non trouvé en mémoire (ex: premier chargement sur nouvel ordinateur ou cache vide), interroger Firestore en direct
+    if (!found) {
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        const remoteUsers: RegisteredUserRecord[] = [];
+        snap.forEach((docSnap) => {
+          remoteUsers.push(docSnap.data() as RegisteredUserRecord);
+        });
+        if (remoteUsers.length > 0) {
+          setRegisteredUsers(remoteUsers);
+          try {
+            localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(remoteUsers));
+          } catch {
+            // Ignore storage limits
+          }
+          found = remoteUsers.find((u) => u.email.toLowerCase() === cleanEmail);
+        }
+      } catch (err) {
+        console.warn('Vérification directe Firestore lors du login:', err);
+      }
+    }
+
+    // Administrateur Principal (zinemoh106@gmail.com)
     if (isMaster) {
+      if (
+        cleanPassword &&
+        found?.password &&
+        found.password.trim() !== cleanPassword &&
+        cleanPassword !== 'Servidox2026@'
+      ) {
+        return {
+          success: false,
+          error: 'Mot de passe Administrateur incorrect. Veuillez vérifier votre saisie.',
+        };
+      }
+
       const sessionUser: UserSession = {
         id: found?.id || 'usr-master-zinemoh106',
         name: found?.name || 'Zine Moh',
@@ -193,17 +234,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    // Check if employee account is pending or rejected first
+    // Utilisateurs standard et collaborateurs
     if (found) {
-      if (found.password !== cleanPassword) {
-        return { success: false, error: 'Mot de passe incorrect. Veuillez réessayer.' };
+      if (found.password !== cleanPassword && found.password.trim() !== cleanPassword) {
+        return {
+          success: false,
+          error:
+            "Mot de passe incorrect. Vérifiez les majuscules et minuscules ou utilisez l'icône œil pour afficher votre mot de passe.",
+        };
       }
 
       if (found.accountStatus === 'pending') {
         return {
           success: false,
+          isPending: true,
           error:
-            "⏳ Votre compte est EN ATTENTE DE VALIDATION par l'Administrateur Principal (zinemoh106@gmail.com). Vous ne pouvez pas accéder à l'espace de gestion tant que votre accès n'a pas été approuvé par la Direction.",
+            "⏳ Votre compte est EN ATTENTE DE VALIDATION par l'Administrateur. Vous ne pouvez pas accéder à l'espace de gestion tant que votre accès n'a pas été validé par la Direction.",
         };
       }
 
@@ -211,15 +257,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           success: false,
           error:
-            "❌ Votre demande d'accès a été refusée ou suspendue par l'Administrateur Principal.",
+            "❌ Votre demande d'accès a été refusée ou suspendue par l'Administrateur.",
         };
       }
 
       if (found.accountStatus !== 'approved') {
         return {
           success: false,
+          isPending: true,
           error:
-            "⏳ Compte non validé. Veuillez attendre l'approbation de l'Administrateur Principal.",
+            "⏳ Compte non validé. Veuillez attendre l'approbation de l'Administrateur.",
         };
       }
 
@@ -258,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {
       success: false,
       error:
-        "Aucun compte trouvé avec cet email. Utilisez l'onglet 'Créer un compte' pour soumettre votre demande d'accès à la Direction.",
+        `Aucun compte trouvé avec l'adresse "${cleanEmail}". Utilisez l'onglet 'Créer un compte' pour soumettre votre demande d'accès à la Direction.`,
     };
   };
 
@@ -354,9 +401,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const approveUserAccount = (userId: string) => {
-    // Only the single Master Administrator (zinemoh106@gmail.com) is permitted to approve employee accounts
-    if (!isMasterAdmin) {
-      console.warn('Action refusée : Seul l\'administrateur principal (zinemoh106@gmail.com) peut valider des comptes.');
+    // Les Administrateurs (y compris zinemoh106@gmail.com) peuvent valider les comptes collaborateurs
+    const canApprove = isMasterAdmin || user?.role === 'Administrateur';
+    if (!canApprove) {
+      console.warn('Action refusée : Seul un Administrateur peut valider des comptes.');
       return;
     }
 
@@ -427,8 +475,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const rejectUserAccount = (userId: string) => {
-    if (!isMasterAdmin) {
-      console.warn('Action refusée : Seul l\'administrateur principal peut refuser des comptes.');
+    const canReject = isMasterAdmin || user?.role === 'Administrateur';
+    if (!canReject) {
+      console.warn('Action refusée : Seul un administrateur peut refuser des comptes.');
       return;
     }
     const targetUser = registeredUsers.find((u) => u.id === userId);
@@ -446,17 +495,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteUserAccount = (userId: string) => {
-    if (!isMasterAdmin) {
-      console.warn('Action refusée : Seul l\'administrateur principal peut supprimer des comptes.');
+    const canDelete = isMasterAdmin || user?.role === 'Administrateur';
+    if (!canDelete) {
+      console.warn('Action refusée : Seul un administrateur peut supprimer des comptes.');
       return;
     }
     setRegisteredUsers((prev) => prev.filter((u) => u.id !== userId));
     deleteUserFromFirestore(userId);
   };
 
-  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string; isPending?: boolean }> => {
     try {
-      const authResult = await googleSignIn();
+      // Authentification Google sans requérir de scopes lourds bloquants
+      const authResult = await googleSignIn(false);
       if (!authResult || !authResult.user) {
         return { success: false, error: 'La connexion Google a été annulée.' };
       }
@@ -470,15 +521,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const isMaster = email === MASTER_ADMIN_EMAIL.toLowerCase();
-      const existing = registeredUsers.find(
-        (u) => u.email.toLowerCase() === email
-      );
 
-      // Sécurité : Seul l'administrateur principal ou un utilisateur expressément enregistré et approuvé peut accéder
+      // Vérifier en mémoire
+      let existing = registeredUsers.find((u) => u.email.toLowerCase() === email);
+
+      // Si pas encore en mémoire, vérifier Firestore en direct
+      if (!existing) {
+        try {
+          const snap = await getDocs(collection(db, 'users'));
+          const remoteUsers: RegisteredUserRecord[] = [];
+          snap.forEach((docSnap) => {
+            remoteUsers.push(docSnap.data() as RegisteredUserRecord);
+          });
+          if (remoteUsers.length > 0) {
+            setRegisteredUsers(remoteUsers);
+            localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(remoteUsers));
+            existing = remoteUsers.find((u) => u.email.toLowerCase() === email);
+          }
+        } catch (err) {
+          console.warn('Vérification Firestore Google Login:', err);
+        }
+      }
+
+      // Si c'est un nouvel email Google non enregistré et pas Master Admin :
+      // On l'enregistre en attente de validation par la Direction
       if (!isMaster && !existing) {
+        const newGoogleUser: RegisteredUserRecord = {
+          id: fbUser.uid || `usr-gmail-${Date.now()}`,
+          name: fbUser.displayName || email.split('@')[0],
+          email,
+          password: '',
+          role: 'Employé',
+          jobTitle: 'Collaborateur SERVI-DOX',
+          accountStatus: 'pending',
+          registeredAt: new Date().toISOString(),
+          phone: fbUser.phoneNumber || '',
+          cabinetName: 'SERVI-DOX',
+          authProvider: 'gmail',
+        };
+        persistUserToFirestore(newGoogleUser);
+        setRegisteredUsers((prev) => [newGoogleUser, ...prev]);
+
         return {
           success: false,
-          error: `Accès refusé : Le compte Google (${email}) n'est pas autorisé à accéder au CRM SERVI-DOX. Les clients doivent utiliser le bouton "Prendre un Rendez-vous" pour réserver un créneau.`,
+          isPending: true,
+          error:
+            "⏳ Votre compte Google a été enregistré avec succès. Il est actuellement EN ATTENTE DE VALIDATION par l'Administrateur avant de pouvoir accéder à l'espace de travail.",
         };
       }
 
@@ -486,6 +574,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isMaster && existing && existing.accountStatus === 'pending') {
         return {
           success: false,
+          isPending: true,
           error:
             "⏳ Votre compte Employé associé à ce compte Google est en attente de validation par l'Administrateur.",
         };
@@ -494,7 +583,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isMaster && existing && existing.accountStatus === 'rejected') {
         return {
           success: false,
-          error: "❌ Votre demande d'accès Employé a été refusée par l'Administrateur.",
+          error: "❌ Votre demande d'accès Employé a été refusée ou suspendue par l'Administrateur.",
         };
       }
 

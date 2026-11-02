@@ -11,9 +11,11 @@ interface ClientEditModalProps {
 }
 
 const DOSSIER_TYPES: TypeDossier[] = [
-  'Auto-entrepreneur',
-  'RC',
   'Entreprise',
+  'RC',
+  'Auto-entrepreneur',
+  'Inscription & Suivi (Bureau)',
+  'Inscription & Suivi (Hors Wilaya)',
   'Autre dossier',
 ];
 
@@ -44,6 +46,7 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
   const [notes, setNotes] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -69,6 +72,7 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
       setMontantReste(res);
       setNotes(client.notes || '');
       setErrors({});
+      setConfirmDelete(false);
     }
   }, [client]);
 
@@ -88,10 +92,7 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
     const errs: Record<string, string> = {};
     if (!nom.trim()) errs.nom = 'Le nom est requis.';
     if (!prenom.trim()) errs.prenom = 'Le prénom est requis.';
-    if (!adresse.trim()) errs.adresse = 'L\'adresse est requise.';
-    if (!email.trim()) errs.email = "L'email est requis.";
     if (!contact.trim()) errs.contact = 'Le contact est requis.';
-    if (!motifDossier.trim()) errs.motifDossier = 'Le motif du dossier est requis.';
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -104,14 +105,16 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
       nom: nom.trim(),
       prenom: prenom.trim(),
       dateInscription,
-      adresse: adresse.trim(),
-      codePostal: codePostal.trim(),
-      ville: ville.trim(),
+      adresse: adresse.trim() || ville.trim() || 'Alger',
+      codePostal: codePostal.trim() || '16000',
+      ville: ville.trim() || 'Alger',
       email: email.trim(),
       contact: contact.trim(),
       typeDossier,
-      precisionAutre: typeDossier === 'Autre dossier' ? precisionAutre.trim() : undefined,
-      motifDossier: motifDossier.trim(),
+      ...(typeDossier === 'Autre dossier' && precisionAutre.trim()
+        ? { precisionAutre: precisionAutre.trim() }
+        : {}),
+      motifDossier: motifDossier.trim() || `Dossier ${typeDossier}`,
       statut,
       montantTotal: Number(montantTotal) || 0,
       montantEncaisse: Number(montantEncaisse) || 0,
@@ -123,10 +126,13 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
   };
 
   const handleDelete = () => {
-    if (confirm(`Confirmez-vous la suppression du dossier de "${client.nom} ${client.prenom}" ?`)) {
-      deleteClient(client.id);
-      onClose();
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
     }
+    deleteClient(client.id);
+    setConfirmDelete(false);
+    onClose();
   };
 
   const waUrl = getWhatsAppUrl(contact, `${prenom} ${nom}`, motifDossier, montantReste);
@@ -393,10 +399,14 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 hover:text-rose-800 hover:bg-rose-100 rounded-md transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+              confirmDelete
+                ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-xs'
+                : 'text-rose-700 hover:text-rose-800 hover:bg-rose-100'
+            }`}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Supprimer le dossier</span>
+            <span>{confirmDelete ? 'Confirmer la suppression ?' : 'Supprimer le dossier'}</span>
           </button>
 
           <div className="flex items-center gap-2">

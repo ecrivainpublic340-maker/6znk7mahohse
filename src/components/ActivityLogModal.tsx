@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClients } from '../context/ClientContext';
-import { History, PlusCircle, RefreshCw, Trash2, CheckCircle2, RotateCcw } from 'lucide-react';
+import { History, PlusCircle, RefreshCw, Trash2, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export const ActivityLogView: React.FC = () => {
-  const { logs, resetToDemoData } = useClients();
+  const { logs, clearLogs } = useClients();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleClear = () => {
+    clearLogs();
+    setShowConfirm(false);
+  };
 
   const getActionBadge = (action: string) => {
     switch (action) {
@@ -48,18 +54,61 @@ export const ActivityLogView: React.FC = () => {
             Journal d'Activité en Direct
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Historique complet des ajouts, modifications et changements de statut en temps réel
+            Historique des notifications d'ajouts, modifications et changements de statut
           </p>
         </div>
 
         <button
-          onClick={resetToDemoData}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-xs transition-colors self-start sm:self-auto"
+          onClick={() => {
+            if (logs.length === 0) return;
+            setShowConfirm(true);
+          }}
+          disabled={logs.length === 0}
+          className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg shadow-2xs transition-all self-start sm:self-auto ${
+            logs.length === 0
+              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+              : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer'
+          }`}
+          title="Effacer uniquement les notifications du journal sans toucher aux clients ni aux calculs"
         >
-          <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-          <span>Réinitialiser les données d'exemple</span>
+          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+          <span>Effacer les notifications du journal</span>
         </button>
       </div>
+
+      {/* Confirmation sécurisée avant effacement */}
+      {showConfirm && (
+        <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-amber-900">
+                Effacer uniquement l'historique des notifications ?
+              </p>
+              <p className="text-[11px] text-amber-800 mt-0.5 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 inline" />
+                <span>
+                  <strong>Vos clients, dossiers et calculs financiers ne seront PAS effacés</strong>. Seules les lignes de notifications ci-dessous seront nettoyées.
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <button
+              onClick={() => setShowConfirm(false)}
+              className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg cursor-pointer"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleClear}
+              className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-2xs cursor-pointer"
+            >
+              Confirmer le nettoyage
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         {logs.length === 0 ? (
