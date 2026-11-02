@@ -40,6 +40,7 @@ export type ActiveTab =
   | 'paie'
   | 'revenues'
   | 'appointments'
+  | 'calendar'
   | 'gmail'
   | 'sheets'
   | 'logs';
@@ -161,6 +162,11 @@ export const Sidebar: React.FC<NavigationProps> = ({
       label: 'Tableau des Revenus',
       icon: <TrendingUp className="w-4 h-4" />,
       masterOnly: true, // STRICTLY RESTRICTED TO zinemoh106@gmail.com
+    },
+    {
+      id: 'calendar',
+      label: 'Google Calendar',
+      icon: <Calendar className="w-4 h-4 text-blue-400" />,
     },
     {
       id: 'gmail',
@@ -369,6 +375,7 @@ export const Navbar: React.FC<NavigationProps> = ({
     paie: 'Fiches de Paie — Bulletins Mensuels & Bilans Annuels',
     revenues: 'Tableau des Revenus (DA)',
     appointments: 'Gestion des Rendez-vous Clients (Réservations)',
+    calendar: 'Google Calendar — Agenda du Cabinet & Synchronisation',
     gmail: 'Messagerie Gmail',
     sheets: 'Google Sheets — Tableurs & Synchronisation Cloud',
     logs: "Journal d'Activité",

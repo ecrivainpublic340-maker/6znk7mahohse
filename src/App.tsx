@@ -17,6 +17,7 @@ import { TeamPage } from './components/TeamPage';
 import { PayrollPage } from './components/PayrollPage';
 import { RevenuePage } from './components/RevenuePage';
 import { AppointmentsPage } from './components/AppointmentsPage';
+import { GoogleCalendarPage } from './components/GoogleCalendarPage';
 import { GmailPage } from './components/GmailPage';
 import { GoogleSheetsPage } from './components/GoogleSheetsPage';
 import { ActivityLogView } from './components/ActivityLogModal';
@@ -239,6 +240,7 @@ const MainApp: React.FC = () => {
 
           {activeTab === 'appointments' && (
             <AppointmentsPage
+              onNavigateCalendar={() => setActiveTab('calendar')}
               onSendGmail={(email, fullName, subject) => {
                 setGmailTargetClient({
                   id: 'RDV-GMAIL',
@@ -261,6 +263,12 @@ const MainApp: React.FC = () => {
                 });
                 setActiveTab('gmail');
               }}
+            />
+          )}
+
+          {activeTab === 'calendar' && (
+            <GoogleCalendarPage
+              onNavigateAppointments={() => setActiveTab('appointments')}
             />
           )}
 

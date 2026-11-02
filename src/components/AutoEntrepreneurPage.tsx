@@ -1598,7 +1598,6 @@ export const AutoEntrepreneurPage: React.FC<AutoEntrepreneurPageProps> = ({ onSe
                       required
                       value={formNom}
                       onChange={(e) => setFormNom(e.target.value)}
-                      placeholder="ex: BENALI"
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                     />
                   </div>
@@ -1610,7 +1609,6 @@ export const AutoEntrepreneurPage: React.FC<AutoEntrepreneurPageProps> = ({ onSe
                       required
                       value={formPrenom}
                       onChange={(e) => setFormPrenom(e.target.value)}
-                      placeholder="ex: Karim"
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                     />
                   </div>

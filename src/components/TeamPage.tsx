@@ -1178,7 +1178,6 @@ export const TeamPage: React.FC<TeamPageProps> = ({ onSendEmployeeGmail, onNavig
                       required
                       value={nom}
                       onChange={(e) => setNom(e.target.value)}
-                      placeholder="Ex: BENALI"
                       className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-700"
                     />
                   </div>
@@ -1192,7 +1191,6 @@ export const TeamPage: React.FC<TeamPageProps> = ({ onSendEmployeeGmail, onNavig
                       required
                       value={prenom}
                       onChange={(e) => setPrenom(e.target.value)}
-                      placeholder="Ex: Karim"
                       className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-700"
                     />
                   </div>

@@ -36,15 +36,19 @@ import {
   deleteAppointmentFromFirestore,
   persistAppointmentToFirestore,
 } from '../services/firestoreSync';
+import { exportAppointmentToCalendar } from '../services/googleCalendarService';
+import { getAccessToken, googleSignIn } from '../services/gmailService';
 import { useClients } from '../context/ClientContext';
 import { AppointmentBookingModal } from './AppointmentBookingModal';
 
 interface AppointmentsPageProps {
   onSendGmail?: (recipientEmail: string, clientName: string, subject: string) => void;
+  onNavigateCalendar?: () => void;
 }
 
-export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail }) => {
+export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail, onNavigateCalendar }) => {
   const { showToast } = useClients();
+  const [syncingAptId, setSyncingAptId] = useState<string | null>(null);
 
   // Appointments State
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
@@ -211,6 +215,27 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
     }
   };
 
+  const handleSyncSingleToCalendar = async (apt: Appointment) => {
+    setSyncingAptId(apt.id);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const res = await googleSignIn(true);
+        token = res?.accessToken || null;
+      }
+      if (!token) {
+        showToast('Google Calendar', 'Connexion requise pour synchroniser le rendez-vous.', 'warning');
+        return;
+      }
+      await exportAppointmentToCalendar(token, apt);
+      showToast('Google Calendar', `Rendez-vous de ${apt.prenom} ${apt.nom} synchronisé sur Google Calendar.`, 'success');
+    } catch (err: any) {
+      showToast('Google Calendar', err?.message || 'Erreur lors de la synchronisation.', 'error');
+    } finally {
+      setSyncingAptId(null);
+    }
+  };
+
   const handleExportCSV = () => {
     if (appointments.length === 0) {
       showToast('Aucun rendez-vous', 'La liste des rendez-vous est vide.', 'warning');
@@ -283,9 +308,19 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
             </button>
           )}
 
+          {onNavigateCalendar && (
+            <button
+              onClick={onNavigateCalendar}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span>Google Calendar</span>
+            </button>
+          )}
+
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition shadow-sm cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             Exporter CSV
@@ -293,7 +328,7 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
 
           <button
             onClick={() => setIsNewBookingModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl transition shadow-md hover:shadow-lg"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl transition shadow-md hover:shadow-lg cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Nouveau Rendez-vous
@@ -605,6 +640,15 @@ export const AppointmentsPage: React.FC<AppointmentsPageProps> = ({ onSendGmail 
                               Annuler
                             </button>
                           )}
+
+                          <button
+                            onClick={() => handleSyncSingleToCalendar(apt)}
+                            disabled={syncingAptId === apt.id}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
+                            title="Synchroniser dans Google Calendar"
+                          >
+                            <Calendar className={`w-3.5 h-3.5 ${syncingAptId === apt.id ? 'animate-spin text-blue-600' : ''}`} />
+                          </button>
 
                           <button
                             onClick={() => handleResendEmail(apt)}
